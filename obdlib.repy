@@ -91,7 +91,6 @@ def get_obd_data(pid):
       raise
     # data needs to be trimmed in order to obtain value.
     socketobject.close()
-    #return toDecimal(trimmer(data))
     return toDecimal(trimmer(data)) 
   except Exception as e:
     log('\n[obdlib]',str(e),'\n')
