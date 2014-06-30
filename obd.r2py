@@ -1,0 +1,32 @@
+"""
+<Program>
+  obd.r2py 
+  
+<Date Started>
+	June 23rd, 2014
+	
+<Author>
+  Mike Reininger
+	
+<Purpose>
+  Using sensorlib to read OBD-II data from vehicle.
+	 
+"""
+dy_import_module_symbols("sensorlib")
+dy_import_module_symbols("obdlib")
+
+
+
+# Initialization [required]
+setOBDIP('{IP OF OBD SERVER HERE}')
+setOBDPort({PORT OF OBD SERVER HERE})
+# Optional, however good practice, incase OBD sensor settings have changed.
+resetOBD()
+setAutomaticProtocol()
+# Retrieve vehicular sensor values
+log("\nCurrent location: ",getCurrentLocation())
+log("\nSpeed: ",getSpeed()," kph")
+# RPM under construction
+log("\nRPM: ",getRPM()," rpm")
+log("\nSpeed: ",toMPH(getSpeed())," mph")
+
