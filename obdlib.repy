@@ -1,0 +1,142 @@
+"""
+<Program>
+  obdlib.repy 
+  
+<Date Started>
+  June 26th, 2014
+	
+<Author>
+  Mike Reininger
+	
+<Purpose>
+  OBD sensor library for collecting vehicular sensor data.
+
+<TODOs>
+  1. Look at the ELM327 manual (http://elmelectronics.com/DSheets/ELM327DS.pdf) and study how the data values are read. They seem really inaccurate... 
+	2. Make a better usage/help.
+	3. Finish trimmer. For now, I'll leave as is for speed calculations. (ln 126)
+  4. Finish '?' error code response for developer. (ln 106)
+"""
+
+mycontext['sensor_port'] = get_connectionport()
+mycontext['sensor_socket'] = getconnection(mycontext['sensor_port'])
+def usage():
+  log("""obdlib is used to collect vehicular sensor data. All PIDs are referenced to http://en.wikipedia.org/wiki/OBD-II_PIDs """)
+  # todo: make better usage.
+
+"""
+  OBD sensor data retrieval functions.
+"""
+# Returns speed in KPH, however a KPH --> MPH function is provided below.  
+def getSpeed():
+  #log("\n[obdlib] Trying speed in kph...")
+  return get_obd_data('01 0D')
+  
+#RPM still needs adjustment. Will do for next version. 
+def getRPM():
+  #log("\n[obdlib] Trying RPM...")
+  return get_obd_data('01 0C')/4
+
+def getMAF():
+  #log("\n[obdlib] Trying MAF...")
+  return get_obd_data('01 10')
+
+def getFuelPressure():
+  #log("\n[obdlib] Trying fuel pressure...")
+  return get_obd_data('01 0A')
+
+def getDistanceTraveledWithMIL():
+  #log("\n[obdlib] Trying to calculate the time that the car has been driving with the check engine light on...")
+  return get_obd_data('01 0F')
+
+def getBarometricPressure():
+  #log("\n[obdlib] Trying barometric pressure...")
+  return get_obd_data('01 33')
+
+def getVIN():
+  return get_obd_data('09 02')
+  
+def getCurrentLocation():
+
+  request_data(mycontext['sensor_socket'], 'startLocating', [])
+  # Loop GPS querying until we get a valid response. The loop will break once SL4A returns a response that should start with {u'network' ... .
+  while True:
+    try:
+      sensor_data = request_data(mycontext['sensor_socket'], 'readLocation', []) 
+      if str(sensor_data).startswith("{u'network'"):
+        break
+    except Exception as e:
+      log('\n[obdlib] ',str(e), '\n')
+      request_data(mycontext['sensor_socket'], 'stopSensing', []) 
+      mycontext['sensor_socket'].close()
+      #raise
+  return sensor_data
+
+
+"""
+  OBD-II sensor functions.
+"""
+def get_obd_data(pid):
+  try:
+    sleep(1)
+    socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),63157,5000)   
+    socketobject.send(pid+'\n')
+    # System needs to wait before it closes the socket, or else OBD sensor data never arrives to the phone.
+    sleep(3)
+    # We should only be reading about 10 bytes.
+    data = socketobject.recv(10)
+    # Needs to be finished after trimmer function is done.
+    if data == '?':
+      log('[obdlib] Error: PID not understood by car.')
+      raise
+    # data needs to be trimmed in order to obtain value.
+    socketobject.close()
+    #return toDecimal(trimmer(data))
+    return toDecimal(trimmer(data)) 
+  except Exception as e:
+    log('\n[obdlib]',str(e),'\n')
+
+# This is used if the developer wants to send a specific PID to the OBD device, perhaps not one listed above...  
+def send_obd_command(pid):
+  try:
+    socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),63157,5000)   
+    socketobject.send(pid+'\n')
+    # System needs to wait before it closes the socket, or else OBD sensor data never arrives to the phone.
+    sleep(3)
+    data = socketobject.recv(10)
+    # Needs improvement (task 4)
+    if data == '?':
+      log('\n[obdlib] Error: PID not understood by car.')
+      raise
+    socketobject.close()
+    log("\n[obdlib] Sent command: ",pid," with response: ",data)
+  except Exception as e:
+    log('\n[obdlib]',str(e),'\n')
+
+# It is by best practice to reset the OBD in case it has been programmed otherwise.  
+def resetOBD():
+  send_obd_command('AT Z')
+
+# It is also best practice to set the OBD's protocol to automatic, so that this library can communicate with it.
+def setAutomaticProtocol():
+  send_obd_command('AT SP 0')
+  
+    
+"""
+  obdlib.repy added functions.
+"""
+def trimmer(data):
+  data = data[8:10]
+  data = data[0:2]
+  return data
+def toDecimal(data):
+  return int(data, 16)
+
+def toMPH(k):
+  return float(k)/1.609344
+
+def setOBDIP(ip):
+  mycontext['OBDIP'] = ip
+
+def setOBDPort(port):
+  mycontext['OBDPort'] = port    
