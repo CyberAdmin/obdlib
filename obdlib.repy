@@ -13,8 +13,8 @@
 
 <TODOs>
   1. Look at the ELM327 manual (http://elmelectronics.com/DSheets/ELM327DS.pdf) and study how the data values are read. They seem really inaccurate... 
-	2. Make a better usage/help.
-	3. Finish trimmer. For now, I'll leave as is for speed calculations. (ln 126)
+  2. Make a better usage/help.
+  3. Finish trimmer. For now, I'll leave as is for speed calculations. (ln 126)
   4. Finish '?' error code response for developer. (ln 106)
 """
 
