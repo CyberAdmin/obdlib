@@ -12,10 +12,9 @@
   OBD sensor library for collecting vehicular sensor data.
 
 <TODOs>
-  1. Look at the ELM327 manual (http://elmelectronics.com/DSheets/ELM327DS.pdf) and study how the data values are read.
+  1. Add more PIDs.
   2. Make a better usage/help.
-  3. Finish trimmer. For now, I'll leave as is for speed calculations. (ln 126)
-  4. Finish '?' error code response for developer. (ln 106)
+  3. Finish '?' error code response for developer. (ln 106)
 """
 
 mycontext['sensor_port'] = get_connectionport()
@@ -81,6 +80,7 @@ def get_obd_data(pid):
   if(mycontext['OBDIP'] == '' or mycontext['OBDIP'] == None or mycontext['OBDPort'] == '' or mycontext['OBDPort'] == None):
     log('[obdlib] Error: OBDIP or OBDPort not assigned.')
   else:
+    cmd = pid[3:5]
     try:
       sleep(1)
       socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),63157,5000)   
@@ -88,13 +88,12 @@ def get_obd_data(pid):
       # System needs to wait before it closes the socket, or else OBD sensor data never arrives to the phone.
       sleep(3)
       # We should only be reading about 10 bytes.
-      data = socketobject.recv(10)
+      data = socketobject.recv(15)
       # Needs to be finished after trimmer function is done.
       if data == '?':
         log('[obdlib] Error: PID not understood by car.')
       else:
-        return toDecimal(trimmer(data)) 
-      # data needs to be trimmed in order to obtain value.
+        return toDecimal(trimmer(data, cmd))
       socketobject.close()
       #return toDecimal(trimmer(data))
     except Exception as e:
@@ -105,12 +104,13 @@ def send_obd_command(pid):
   if(mycontext['OBDIP'] == '' or mycontext['OBDIP'] == None or mycontext['OBDPort'] == '' or mycontext['OBDPort'] == None):
     log('[obdlib] Error: OBDIP or OBDPort not assigned.')
   else:
+
     try:
       socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),63157,5000)   
       socketobject.send(pid+'\n')
       # System needs to wait before it closes the socket, or else OBD sensor data never arrives to the phone.
       sleep(3)
-      data = socketobject.recv(10)
+      data = socketobject.recv(15)
       # Needs improvement (task 4)
       if data == '?':
         log('\n[obdlib] Error: PID not understood by car.')
@@ -132,9 +132,9 @@ def setAutomaticProtocol():
 """
   obdlib.repy added functions.
 """
-def trimmer(data):
-  data = data[8:10]
-  data = data[0:2]
+def trimmer(data, cmd):
+  data = data[data.index(cmd)+3:-2]
+  data = data.replace(" ","")
   return data
 def toDecimal(data):
   return int(data, 16)
