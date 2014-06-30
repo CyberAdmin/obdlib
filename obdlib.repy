@@ -77,40 +77,48 @@ def getCurrentLocation():
   OBD-II sensor functions.
 """
 def get_obd_data(pid):
-  try:
-    sleep(1)
-    socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),63157,5000)   
-    socketobject.send(pid+'\n')
-    # System needs to wait before it closes the socket, or else OBD sensor data never arrives to the phone.
-    sleep(3)
-    # We should only be reading about 10 bytes.
-    data = socketobject.recv(10)
-    # Needs to be finished after trimmer function is done.
-    if data == '?':
-      log('[obdlib] Error: PID not understood by car.')
-      raise
-    # data needs to be trimmed in order to obtain value.
-    socketobject.close()
-    return toDecimal(trimmer(data)) 
-  except Exception as e:
-    log('\n[obdlib]',str(e),'\n')
+  # Check if mycontext['OBDIP'] and mycontext['OBDPort'] have been set.
+  if(mycontext['OBDIP'] == '' or mycontext['OBDIP'] == None or mycontext['OBDPort'] == '' or mycontext['OBDPort'] == None):
+    log('[obdlib] Error: OBDIP or OBDPort not assigned.')
+  else:
+    try:
+      sleep(1)
+      socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),63157,5000)   
+      socketobject.send(pid+'\n')
+      # System needs to wait before it closes the socket, or else OBD sensor data never arrives to the phone.
+      sleep(3)
+      # We should only be reading about 10 bytes.
+      data = socketobject.recv(10)
+      # Needs to be finished after trimmer function is done.
+      if data == '?':
+        log('[obdlib] Error: PID not understood by car.')
+      else:
+        return toDecimal(trimmer(data)) 
+      # data needs to be trimmed in order to obtain value.
+      socketobject.close()
+      #return toDecimal(trimmer(data))
+    except Exception as e:
+      log('\n[obdlib]',str(e),'\n')
 
 # This is used if the developer wants to send a specific PID to the OBD device, perhaps not one listed above...  
 def send_obd_command(pid):
-  try:
-    socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),63157,5000)   
-    socketobject.send(pid+'\n')
-    # System needs to wait before it closes the socket, or else OBD sensor data never arrives to the phone.
-    sleep(3)
-    data = socketobject.recv(10)
-    # Needs improvement (task 4)
-    if data == '?':
-      log('\n[obdlib] Error: PID not understood by car.')
-      raise
-    socketobject.close()
-    log("\n[obdlib] Sent command: ",pid," with response: ",data)
-  except Exception as e:
-    log('\n[obdlib]',str(e),'\n')
+  if(mycontext['OBDIP'] == '' or mycontext['OBDIP'] == None or mycontext['OBDPort'] == '' or mycontext['OBDPort'] == None):
+    log('[obdlib] Error: OBDIP or OBDPort not assigned.')
+  else:
+    try:
+      socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),63157,5000)   
+      socketobject.send(pid+'\n')
+      # System needs to wait before it closes the socket, or else OBD sensor data never arrives to the phone.
+      sleep(3)
+      data = socketobject.recv(10)
+      # Needs improvement (task 4)
+      if data == '?':
+        log('\n[obdlib] Error: PID not understood by car.')
+      else:
+        log("\n[obdlib] Sent command: ",pid," with response: ",data)
+      socketobject.close()
+    except Exception as e:
+      log('\n[obdlib]',str(e),'\n')
 
 # It is by best practice to reset the OBD in case it has been programmed otherwise.  
 def resetOBD():
