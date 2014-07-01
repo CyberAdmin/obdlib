@@ -63,7 +63,7 @@ def getVIN():
 def getThrottlePosition():
   return get_obd_data('01 11') 
 
-# Returns the current location of the phone. This needs to be parse elsewhere.
+# Returns the current location of the phone. This needs to be parsed elsewhere.
 def getCurrentLocation():
   request_data(mycontext['sensor_socket'], 'startLocating', [])
   # Loop GPS querying until we get a valid response. The loop will break once SL4A returns a response that should start with {u'network' ... .
@@ -94,46 +94,41 @@ def get_obd_data(pid):
     log('[obdlib] Error: OBDIP or OBDPort not assigned.')
   else:
     cmd = pid[3:5]
-    try:
-      sleep(1)
-      socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),63157,5000)   
-      socketobject.send(pid+'\n')
-      # System needs to wait before it closes the socket, or else OBD sensor data never arrives to the phone.
-      sleep(3)
-      # We should only be reading about 10 bytes.
-      data = socketobject.recv(15)
-      socketobject.close()
-      # Needs to be finished after trimmer function is done.
-      if data == '?\n>':
-        log('[obdlib] Error: PID not understood by car.')
-      elif data == 'NO DATA\n>':
-        log('[obdlib] Error: No data provided for specified PID.')
-      else:
-        return toDecimal(trimmer(data, cmd))
-    except Exception as e:
-      log('\n[obdlib]',str(e),'\n')
+    sleep(1)
+    socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),63157,5000)   
+    socketobject.send(pid+'\n')
+    # System needs to wait before it closes the socket, or else OBD sensor data never arrives to the phone.
+    sleep(3)
+    # We should only be reading about 10 bytes.
+    data = socketobject.recv(15)
+    socketobject.close()
+    # Needs to be finished after trimmer function is done.
+    if data == '?\n>':
+      log('[obdlib] Error: PID not understood by car.')
+    elif data == 'NO DATA\n>':
+      log('[obdlib] Error: No data provided for specified PID.')
+    else:
+      return toDecimal(trimmer(data, cmd))
 
 # This is used if the developer wants to send a specific PID to the OBD device, perhaps not one listed above...  
 def send_obd_command(pid):
   if(mycontext['OBDIP'] == '' or mycontext['OBDIP'] == None or mycontext['OBDPort'] == '' or mycontext['OBDPort'] == None):
     log('[obdlib] Error: OBDIP or OBDPort not assigned.')
   else:
-    try:
-      socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),63157,5000)   
-      socketobject.send(pid+'\n')
-      # System needs to wait before it closes the socket, or else OBD sensor data never arrives to the phone.
-      sleep(3)
-      data = socketobject.recv(15)
-      socketobject.close()
-      # Needs improvement (task 4)
-      if data == '?\n>':
-        log('\n[obdlib] Error: PID not understood by car.')
-      elif data == 'NO DATA\n>':
-        log('[obdlib] Error: No data provided for specified PID.')
-      else:
-        log("\n[obdlib] Sent command: ",pid," with response: ",data)
-    except Exception as e:
-      log('\n[obdlib]',str(e),'\n')
+    socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),63157,5000)   
+    socketobject.send(pid+'\n')
+    # System needs to wait before it closes the socket, or else OBD sensor data never arrives to the phone.
+    sleep(3)
+    data = socketobject.recv(15)
+    socketobject.close()
+    # Needs improvement (task 4). If data is not understood, then obdlib will notify the user in the logs.
+    if data == '?\n>':
+      log('\n[obdlib] Error: PID not understood by car.')
+    elif data == 'NO DATA\n>':
+      log('[obdlib] Error: No data provided for specified PID.')
+    else:
+      log("\n[obdlib] Sent command: ",pid," with response: ",data)
+
 
 # It is good practice to reset the OBD in case it has been programmed otherwise. [OPTIONAL]
 def resetOBD():
