@@ -19,23 +19,16 @@
   1. Plug the device into the OBD port under the steering wheel, near the pedals. 
   2. Navigate to your Android's settings --> wireless settings --> connect to wifi router.
   3. Choose WiFi_OBDii. 
-
-  How to run example (obd.r2py) code on Android:
-  1. Open the Sensibility app on the Android. Make sure that it has started.
-  2. *Modify obd.r2py so that mycontext['OBDIP'] and mycontext['OBDPort'] match with the credentials provided by the OBD sensor's manufacturer. (Note: This can also be done with arguments.)
-  3. Run seash and connect to Android.
-  4. Upload dylink.repy, sensorlib.repy, obdlib.repy and obd.r2py using seash.
-  5. Run: startv2 dylink.repy obd.r2py
-  6. Run: show log
   
 <TODOs>
-  2. Edit usage/help.
   3. Finish '?' error code response for developer, also for return type 'NO DATA'. (ln 106)
+  4. Test with cars.
 """
 
 
 
 """
+<Purpose>
   OBD sensor data retrieval functions.
 """
 # Returns speed in KPH, however a KPH --> MPH converter function is provided below.  
@@ -72,7 +65,6 @@ def getThrottlePosition():
 
 # Returns the current location of the phone. This needs to be parse elsewhere.
 def getCurrentLocation():
-
   request_data(mycontext['sensor_socket'], 'startLocating', [])
   # Loop GPS querying until we get a valid response. The loop will break once SL4A returns a response that should start with {u'network' ... .
   while True:
@@ -84,16 +76,16 @@ def getCurrentLocation():
       log('\n[obdlib] ',str(e), '\n')
       request_data(mycontext['sensor_socket'], 'stopSensing', []) 
       mycontext['sensor_socket'].close()
-      #raise
   return sensor_data
 
-# Returns the fuel consumption. [UNDER CONSTRUCTION]
+# Returns the fuel consumption. [NEEDS TO BE DOUBLE CHECKED]
 def getFuelConsumption():
   # Use MAF and VSS to calculate the instantaneous fuel consumption rate. This is done through the formula posted here: http://www.lightner.net/lightner/bruce/Lightner-183.pdf
   mpg = 710.7 * getSpeed()/getMAF()
   return mpg
 
 """
+<Purpose>
   OBD-II sensor functions.
 """
 def get_obd_data(pid):
@@ -110,15 +102,14 @@ def get_obd_data(pid):
       sleep(3)
       # We should only be reading about 10 bytes.
       data = socketobject.recv(15)
+      socketobject.close()
       # Needs to be finished after trimmer function is done.
-      if data == '?':
+      if data == '?\n>':
         log('[obdlib] Error: PID not understood by car.')
-      elif data == 'NO DATA':
+      elif data == 'NO DATA\n>':
         log('[obdlib] Error: No data provided for specified PID.')
       else:
         return toDecimal(trimmer(data, cmd))
-      socketobject.close()
-      #return toDecimal(trimmer(data))
     except Exception as e:
       log('\n[obdlib]',str(e),'\n')
 
@@ -127,21 +118,20 @@ def send_obd_command(pid):
   if(mycontext['OBDIP'] == '' or mycontext['OBDIP'] == None or mycontext['OBDPort'] == '' or mycontext['OBDPort'] == None):
     log('[obdlib] Error: OBDIP or OBDPort not assigned.')
   else:
-
     try:
       socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),63157,5000)   
       socketobject.send(pid+'\n')
       # System needs to wait before it closes the socket, or else OBD sensor data never arrives to the phone.
       sleep(3)
       data = socketobject.recv(15)
+      socketobject.close()
       # Needs improvement (task 4)
-      if data == '?':
+      if data == '?\n>':
         log('\n[obdlib] Error: PID not understood by car.')
-      elif data == 'NO DATA':
+      elif data == 'NO DATA\n>':
         log('[obdlib] Error: No data provided for specified PID.')
       else:
         log("\n[obdlib] Sent command: ",pid," with response: ",data)
-      socketobject.close()
     except Exception as e:
       log('\n[obdlib]',str(e),'\n')
 
@@ -152,9 +142,9 @@ def resetOBD():
 # It is good practice to set the OBD's protocol to automatic, so that this library can communicate with it, in case it has been changed otherwise. [OPTIONAL]
 def setAutomaticProtocol():
   send_obd_command('AT SP 0')
-  
-    
+
 """
+<Purpose>
   obdlib.repy added functions.
 """
 # Needed to trim the data from the OBD-II. This will remove the hex headers (ie. 41 {PID}), and then join 4 byte hex. It is then converted in get_obd_data()
