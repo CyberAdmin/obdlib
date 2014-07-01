@@ -11,17 +11,30 @@
 <Purpose>
   OBD sensor library for collecting vehicular sensor data.
 
+<Usage/Help>
+  OBD-II ELM327 sensors can be used to communicate between a car's controller area network (CAN), also known as the car's electronic brains, and a computer or mobile device. 
+  They can be purchased online (suggested model: http://amzn.com/B00AOIM2CC).
+
+  How to connect to the OBD on the Android:
+  1. Plug the device into the OBD port under the steering wheel, near the pedals. 
+  2. Navigate to your Android's settings --> wireless settings --> connect to wifi router.
+  3. Choose WiFi_OBDii. 
+
+  How to run example (obd.r2py) code on Android:
+  1. Open the Sensibility app on the Android. Make sure that it has started.
+  2. *Modify obd.r2py so that mycontext['OBDIP'] and mycontext['OBDPort'] match with the credentials provided by the OBD sensor's manufacturer. (Note: This can also be done with arguments.)
+  3. Run seash and connect to Android.
+  4. Upload dylink.repy, sensorlib.repy, obdlib.repy and obd.r2py using seash.
+  5. Run: startv2 dylink.repy obd.r2py
+  6. Run: show log
+  
 <TODOs>
-  1. Add more PIDs.
-  2. Make a better usage/help.
-  3. Finish '?' error code response for developer. (ln 106)
+  2. Edit usage/help.
+  3. Finish '?' error code response for developer, also for return type 'NO DATA'. (ln 106)
+  6. Try to make the code run faster. Maybe too many sleeps?
 """
 
-mycontext['sensor_port'] = get_connectionport()
-mycontext['sensor_socket'] = getconnection(mycontext['sensor_port'])
-def usage():
-  log("""obdlib is used to collect vehicular sensor data. All PIDs are referenced to http://en.wikipedia.org/wiki/OBD-II_PIDs """)
-  # todo: make better usage.
+
 
 """
   OBD sensor data retrieval functions.
@@ -31,11 +44,12 @@ def getSpeed():
   #log("\n[obdlib] Trying speed in kph...")
   return get_obd_data('01 0D')
   
-#RPM still needs adjustment. Will do for next version. 
+# Since RPM is sent to the Android in increments of 1/4 rpm, we divide the sensor value by 4 to obtain the real RPM.
 def getRPM():
   #log("\n[obdlib] Trying RPM...")
   return get_obd_data('01 0C')/4
 
+# Useful for calculating MPG (see task 5)
 def getMAF():
   #log("\n[obdlib] Trying MAF...")
   return get_obd_data('01 10')
@@ -55,6 +69,9 @@ def getBarometricPressure():
 def getVIN():
   return get_obd_data('09 02')
   
+def getThrottlePosition():
+  return get_obd_data('01 11') 
+
 def getCurrentLocation():
 
   request_data(mycontext['sensor_socket'], 'startLocating', [])
@@ -71,6 +88,10 @@ def getCurrentLocation():
       #raise
   return sensor_data
 
+def getFuelConsumption():
+  # Use MAF and VSS to calculate the instantaneous fuel consumption rate. This is done through the formula posted here: http://www.lightner.net/lightner/bruce/Lightner-183.pdf
+  mpg = (710.7 * getSpeed())/getMAF()
+  return mpg
 
 """
   OBD-II sensor functions.
@@ -92,6 +113,8 @@ def get_obd_data(pid):
       # Needs to be finished after trimmer function is done.
       if data == '?':
         log('[obdlib] Error: PID not understood by car.')
+      elif data == 'NO DATA':
+        log('[obdlib] Error: No data provided for specified PID.')
       else:
         return toDecimal(trimmer(data, cmd))
       socketobject.close()
@@ -114,13 +137,15 @@ def send_obd_command(pid):
       # Needs improvement (task 4)
       if data == '?':
         log('\n[obdlib] Error: PID not understood by car.')
+      elif data == 'NO DATA':
+        log('[obdlib] Error: No data provided for specified PID.')
       else:
         log("\n[obdlib] Sent command: ",pid," with response: ",data)
       socketobject.close()
     except Exception as e:
       log('\n[obdlib]',str(e),'\n')
 
-# It is by best practice to reset the OBD in case it has been programmed otherwise.  
+# It is best practice to reset the OBD in case it has been programmed otherwise.  
 def resetOBD():
   send_obd_command('AT Z')
 
@@ -136,6 +161,7 @@ def trimmer(data, cmd):
   data = data[data.index(cmd)+3:-2]
   data = data.replace(" ","")
   return data
+  
 def toDecimal(data):
   return int(data, 16)
 
@@ -146,4 +172,8 @@ def setOBDIP(ip):
   mycontext['OBDIP'] = ip
 
 def setOBDPort(port):
-  mycontext['OBDPort'] = port    
+  mycontext['OBDPort'] = port   
+
+def setSensorPort(port):
+  mycontext['sensor_port'] = port
+  mycontext['sensor_socket'] = getconnection(mycontext['sensor_port'])
