@@ -31,7 +31,6 @@
 <TODOs>
   2. Edit usage/help.
   3. Finish '?' error code response for developer, also for return type 'NO DATA'. (ln 106)
-  6. Try to make the code run faster. Maybe too many sleeps?
 """
 
 
@@ -39,39 +38,39 @@
 """
   OBD sensor data retrieval functions.
 """
-# Returns speed in KPH, however a KPH --> MPH function is provided below.  
+# Returns speed in KPH, however a KPH --> MPH converter function is provided below.  
 def getSpeed():
-  #log("\n[obdlib] Trying speed in kph...")
   return get_obd_data('01 0D')
   
-# Since RPM is sent to the Android in increments of 1/4 rpm, we divide the sensor value by 4 to obtain the real RPM.
+# Since RPM is sent to the Android in increments of 1/4 rpm, we divide the sensor value by 4 to obtain the real RPM (according to: http://elmelectronics.com/DSheets/ELM327DS.pdf)
 def getRPM():
-  #log("\n[obdlib] Trying RPM...")
   return get_obd_data('01 0C')/4
 
-# Useful for calculating MPG (see task 5)
+# Useful for calculating instantaneous fuel consumption.
 def getMAF():
-  #log("\n[obdlib] Trying MAF...")
   return get_obd_data('01 10')
 
+# Returns fuel pressure.
 def getFuelPressure():
-  #log("\n[obdlib] Trying fuel pressure...")
   return get_obd_data('01 0A')
 
+# Returns the distance traveled with the "check engine light" on.
 def getDistanceTraveledWithMIL():
-  #log("\n[obdlib] Trying to calculate the time that the car has been driving with the check engine light on...")
-  return get_obd_data('01 0F')
+  return get_obd_data('01 21')
 
+# Returns barometric pressure.
 def getBarometricPressure():
-  #log("\n[obdlib] Trying barometric pressure...")
   return get_obd_data('01 33')
 
+# Returns the car's VIN number.
 def getVIN():
   return get_obd_data('09 02')
-  
+
+# Returns how much the gas pedal is depressed (0-100%)  
 def getThrottlePosition():
   return get_obd_data('01 11') 
 
+# Returns the current location of the phone. This needs to be parse elsewhere.
 def getCurrentLocation():
 
   request_data(mycontext['sensor_socket'], 'startLocating', [])
@@ -88,9 +87,10 @@ def getCurrentLocation():
       #raise
   return sensor_data
 
+# Returns the fuel consumption. [UNDER CONSTRUCTION]
 def getFuelConsumption():
   # Use MAF and VSS to calculate the instantaneous fuel consumption rate. This is done through the formula posted here: http://www.lightner.net/lightner/bruce/Lightner-183.pdf
-  mpg = (710.7 * getSpeed())/getMAF()
+  mpg = 710.7 * getSpeed()/getMAF()
   return mpg
 
 """
@@ -145,11 +145,11 @@ def send_obd_command(pid):
     except Exception as e:
       log('\n[obdlib]',str(e),'\n')
 
-# It is best practice to reset the OBD in case it has been programmed otherwise.  
+# It is good practice to reset the OBD in case it has been programmed otherwise. [OPTIONAL]
 def resetOBD():
   send_obd_command('AT Z')
 
-# It is also best practice to set the OBD's protocol to automatic, so that this library can communicate with it.
+# It is good practice to set the OBD's protocol to automatic, so that this library can communicate with it, in case it has been changed otherwise. [OPTIONAL]
 def setAutomaticProtocol():
   send_obd_command('AT SP 0')
   
@@ -157,23 +157,35 @@ def setAutomaticProtocol():
 """
   obdlib.repy added functions.
 """
+# Needed to trim the data from the OBD-II. This will remove the hex headers (ie. 41 {PID}), and then join 4 byte hex. It is then converted in get_obd_data()
 def trimmer(data, cmd):
   data = data[data.index(cmd)+3:-2]
   data = data.replace(" ","")
   return data
-  
+
+# Used to convert hex to decimal.  
 def toDecimal(data):
   return int(data, 16)
 
+# Used to convert KPH to MPH.
 def toMPH(k):
   return float(k)/1.609344
 
+# Sets OBD IP. Default is 192.168.0.10 (usually what the ELM327 manufacturer programs into the OBD-II sensor).
 def setOBDIP(ip):
-  mycontext['OBDIP'] = ip
+  if ip==None:
+    mycontext['OBDIP'] = '192.168.0.10'
+  else:
+    mycontext['OBDIP'] = ip
 
+# Sets OBD port. Default is 35000 (usually what the ELM327 manufacturer programs into the OBD-II sensor).
 def setOBDPort(port):
-  mycontext['OBDPort'] = port   
+  if port==None:
+    mycontext['OBDPort'] = 35000
+  else:
+    mycontext['OBDPort'] = port   
 
+# Sensor port (SL4A port) can be modified in obd.r2py. 
 def setSensorPort(port):
   mycontext['sensor_port'] = port
   mycontext['sensor_socket'] = getconnection(mycontext['sensor_port'])
