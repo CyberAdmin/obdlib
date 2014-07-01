@@ -3,13 +3,14 @@
   obd.r2py 
   
 <Date Started>
-	June 23rd, 2014
+  June 23rd, 2014
 	
 <Author>
   Mike Reininger
 	
 <Purpose>
   Using sensorlib to read OBD-II data from vehicle.
+
 	 
 """
 dy_import_module_symbols("sensorlib")
@@ -18,15 +19,23 @@ dy_import_module_symbols("obdlib")
 
 
 # Initialization [required]
-setOBDIP('{IP OF OBD SERVER HERE}')
-setOBDPort({PORT OF OBD SERVER HERE})
-# Optional, however good practice, incase OBD sensor settings have changed.
+setOBDIP('{OBD SIM/SENSOR IP HERE}')
+setOBDPort({OBD SIM/SENSOR PORT HERE})
+# Set sensor port. By default, use get_connectionport()
+setSensorPort(get_connectionport())
+# Optional, however good practice, incase OBD sensor settings have changed. [MR: Speed this up...]
 resetOBD()
 setAutomaticProtocol()
 # Retrieve vehicular sensor values
 log("\nCurrent location: ",getCurrentLocation())
-log("\nSpeed: ",getSpeed()," kph")
-# RPM under construction
-log("\nRPM: ",getRPM()," rpm")
-log("\nSpeed: ",toMPH(getSpeed())," mph")
 
+# You can retrieve speed in KPH and then convert it to MPH using toMPH()
+speed = getSpeed() #KPH
+log("\nSpeed: ",speed," kph")
+log("\nSpeed: ",toMPH(speed)," mph")
+
+log("\nRPM: ",getRPM()," rpm")
+log("\nMAF: ", getMAF())
+
+log("\nThrottle position [0-100%]: ",getThrottlePosition(),"%")
+log("\nFuel consumption ",getFuelConsumption()," mpg")
