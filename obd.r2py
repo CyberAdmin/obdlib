@@ -27,24 +27,34 @@
 """
 dy_import_module_symbols("sensorlib")
 dy_import_module_symbols("obdlib")
-#Initialization [required]
-if(callargs[0] == None or callargs[0] == ''):
+
+#Change this if you have set a different sensor port.
+mycontext['SENSOR_PORT'] = get_connectionport()
+
+
+def defaultSetup():
+  log("\nSetting OBDIP and OBDPort to default values.\n")
   setOBDIP('192.168.0.10')
-else:
-  setOBDIP(callargs[0])
-if(callargs[1] == None or callargs[1] == ''):
   setOBDPort(35000)
+
+def customSetup(ip,port):
+  setOBDIP(ip)
+  setOBDPort(int(port))
+#Initialization [required]
+if len(callargs) < 2:
+  defaultSetup()
 else:
-  setOBDPort(int(callargs[1]))  
+  customSetup(callargs[0], callargs[1])
 # Set sensor port. By default, use get_connectionport()
-setSensorPort(get_connectionport())
-# Optional, however good practice, in case OBD sensor settings have changed. [MR: Speed this up...]
+setSensorPort(mycontext['SENSOR_PORT'])
+# Optional, however good practice, in case OBD sensor settings have changed. []
 resetOBD()
 setAutomaticProtocol()
 # Retrieve vehicular sensor values
 log("\nCurrent location: ",getCurrentLocation())
 # You can retrieve speed in KPH and then convert it to MPH using toMPH()
 speed = getSpeed() #KPH
+
 log("\nSpeed: ",speed," kph")
 log("\nSpeed: ",toMPH(speed)," mph")
 
@@ -53,5 +63,3 @@ log("\nMAF: ", getMAF()," grams/seconds")
 
 log("\nThrottle position [0-100%]: ",getThrottlePosition(),"%")
 log("\nFuel consumption ",getFuelConsumption()," mpg")
-
-log("\nVIN: ",getVIN())
