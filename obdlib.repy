@@ -62,6 +62,10 @@ def getVIN():
 def getThrottlePosition():
   return get_obd_data('01 11') 
 
+# Returns how much fuel is in the tank (0-100%)
+def getFuelLevel():
+  return get_obd_data('01 2F')
+  
 # Returns the current location of the phone. This needs to be parsed elsewhere.
 def getCurrentLocation():
   request_data(mycontext['sensor_socket'], 'startLocating', [])
