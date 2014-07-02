@@ -6,8 +6,7 @@
   June 26th, 2014
 	
 <Author>
-  Mike Reininger
-	
+  Mike Reininger, NYU-Poly, USA
 <Purpose>
   OBD sensor library for collecting vehicular sensor data.
 
@@ -169,6 +168,20 @@ def setOBDPort(port):
     mycontext['OBDPort'] = 35000
   else:
     mycontext['OBDPort'] = port   
+
+"""
+<Purpose>
+  Initialization functions.
+"""
+# Setting OBDIP and OBDPort to default values, which are pre-programmed into the OBD-II ELM327 wifi sensor (192.168.0.10:35000).
+def defaultSetup():
+  setOBDIP('192.168.0.10')
+  setOBDPort(35000)
+
+# Or, custom setup is also an option.
+def customSetup(ip,port):
+  setOBDIP(ip)
+  setOBDPort(int(port))
 
 # Sensor port (SL4A port) can be modified in obd.r2py. 
 def setSensorPort(port):
