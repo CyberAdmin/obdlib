@@ -9,6 +9,7 @@
   Mike Reininger
 	
 <Purpose>
+  Demo script to pull OBD data from the Android.
   Uses obdlib.repy to read OBD-II data from vehicle.
   
 <Usage>
@@ -20,7 +21,7 @@
   4. upload obd.r2py
   5. startv2 dylink.repy obd.r2py
 
-  OR
+  OR user provides OBD IP and OBD port
 
   5. startv2 dylink.repy obd.r2py {OBD IP} {OBD port}
      ie. startv2 dylink.repy obd.r2py 192.168.0.10 35000 
@@ -28,28 +29,31 @@
 dy_import_module_symbols("sensorlib")
 dy_import_module_symbols("obdlib")
 
-#Change this if you have set a different sensor port.
-mycontext['SENSOR_PORT'] = get_connectionport()
+"""
+Start initialization.
+"""
+# Set sensor port. By default, use get_connectionport(), however, you can change the sensor port manually.
+setSensorPort(get_connectionport())
 
-
-def defaultSetup():
-  log("\nSetting OBDIP and OBDPort to default values.\n")
-  setOBDIP('192.168.0.10')
-  setOBDPort(35000)
-
-def customSetup(ip,port):
-  setOBDIP(ip)
-  setOBDPort(int(port))
 #Initialization [required]
 if len(callargs) < 2:
+  # If user starts without giving obd ip and obd port, then do the default setup in obdlib.repy.
   defaultSetup()
 else:
+  # If user inputs custom obd ip and obd port, then do the custom setup in obdlib.repy.
   customSetup(callargs[0], callargs[1])
-# Set sensor port. By default, use get_connectionport()
-setSensorPort(mycontext['SENSOR_PORT'])
-# Optional, however good practice, in case OBD sensor settings have changed. []
+
+# Optional, however good practice, in case OBD sensor settings have been changed.
 resetOBD()
 setAutomaticProtocol()
+"""
+End initialization.
+"""
+
+
+"""
+Start car sensor data retrieval.
+"""
 # Retrieve vehicular sensor values
 log("\nCurrent location: ",getCurrentLocation())
 # You can retrieve speed in KPH and then convert it to MPH using toMPH()
@@ -63,3 +67,6 @@ log("\nMAF: ", getMAF()," grams/seconds")
 
 log("\nThrottle position [0-100%]: ",getThrottlePosition(),"%")
 log("\nFuel consumption ",getFuelConsumption()," mpg")
+"""
+End car sensor data retrieval.
+"""
