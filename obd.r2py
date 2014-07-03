@@ -44,8 +44,8 @@ else:
   customSetup(callargs[0], callargs[1])
 
 # Optional, however good practice, in case OBD sensor settings have been changed.
-resetOBD()
-setAutomaticProtocol()
+#resetOBD()
+#setAutomaticProtocol()
 """
 End initialization.
 """
@@ -67,8 +67,7 @@ log("\nMAF: ", getMAF()," grams/seconds")
 
 log("\nThrottle position [0-100%]: ",getThrottlePosition(),"%")
 log("\nFuel consumption ",getFuelConsumption()," mpg")
-
-log('\nVIN: ',getVIN())
+log('\nFuel pressure ',getFuelPressure(),' kpa')
 """
 End car sensor data retrieval.
 """
