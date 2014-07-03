@@ -20,8 +20,7 @@
   3. Choose WiFi_OBDii. 
   
 <TODOs>
-  3. Finish '?' error code response for developer, also for return type 'NO DATA'. (ln 106)
-  4. Test with cars.
+  1. Test with cars.
 """
 
 
@@ -106,9 +105,9 @@ def get_obd_data(pid):
     data = socketobject.recv(15)
     socketobject.close()
     # Needs to be finished after trimmer function is done.
-    if data == '?\n>':
+    if data.startswith('?'):
       log('[obdlib] Error: PID not understood by car.')
-    elif data == 'NO DATA\n>':
+    elif data.startswith('NO DATA'):
       log('[obdlib] Error: No data provided for specified PID.')
     else:
       return toDecimal(trimmer(data, cmd))
@@ -125,9 +124,9 @@ def send_obd_command(pid):
     data = socketobject.recv(15)
     socketobject.close()
     # Needs improvement (task 4). If data is not understood, then obdlib will notify the user in the logs.
-    if data == '?\n>':
+    if data.startswith('?'):
       log('\n[obdlib] Error: PID not understood by car.')
-    elif data == 'NO DATA\n>':
+    elif data.startswith('NO DATA'):
       log('[obdlib] Error: No data provided for specified PID.')
     else:
       log("\n[obdlib] Sent command: ",pid," with response: ",data)
