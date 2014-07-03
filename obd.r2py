@@ -67,6 +67,8 @@ log("\nMAF: ", getMAF()," grams/seconds")
 
 log("\nThrottle position [0-100%]: ",getThrottlePosition(),"%")
 log("\nFuel consumption ",getFuelConsumption()," mpg")
+
+log('\nVIN: ',getVIN())
 """
 End car sensor data retrieval.
 """
