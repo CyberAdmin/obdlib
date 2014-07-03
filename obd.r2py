@@ -21,7 +21,7 @@
   4. upload obd.r2py
   5. startv2 dylink.repy obd.r2py
 
-  OR user provides OBD IP and OBD port
+  OR user provided OBD IP and OBD port
 
   5. startv2 dylink.repy obd.r2py {OBD IP} {OBD port}
      ie. startv2 dylink.repy obd.r2py 192.168.0.10 35000 
@@ -29,9 +29,10 @@
 dy_import_module_symbols("sensorlib")
 dy_import_module_symbols("obdlib")
 
-"""
-Start initialization.
-"""
+#===============================================================
+# Initialization
+#===============================================================
+
 # Set sensor port. By default, use get_connectionport(), however, you can change the sensor port manually.
 setSensorPort(get_connectionport())
 
@@ -46,15 +47,12 @@ else:
 # Optional, however good practice, in case OBD sensor settings have been changed.
 #resetOBD()
 #setAutomaticProtocol()
-"""
-End initialization.
-"""
 
 
-"""
-Start car sensor data retrieval.
-"""
+#===============================================================
 # Retrieve vehicular sensor values
+#===============================================================
+
 log("\nCurrent location: ",getCurrentLocation())
 # You can retrieve speed in KPH and then convert it to MPH using toMPH()
 speed = getSpeed() #KPH
@@ -68,6 +66,3 @@ log("\nMAF: ", getMAF()," grams/seconds")
 log("\nThrottle position [0-100%]: ",getThrottlePosition(),"%")
 log("\nFuel consumption ",getFuelConsumption()," mpg")
 log('\nFuel pressure ',getFuelPressure(),' kpa')
-"""
-End car sensor data retrieval.
-"""
