@@ -6,7 +6,7 @@
   Mike Reininger
   
 <Status>
-  May become depracated, however for the time being, it uses way less dependencies, so it's the most efficient in term of uploading.
+  May become depracated, however for the time being, it uses way less dependencies than httpretrieve.r2py.
   
 """
 
