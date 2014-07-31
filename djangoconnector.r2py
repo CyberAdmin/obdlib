@@ -1,0 +1,32 @@
+"""
+<Purpose>
+  Sends vehicular sensor data to Seth's Django SQL database.
+  
+<Author>
+  Mike Reininger
+  
+<Status>
+  May become depracated, however for the time being, it uses way less dependencies, so it's the most efficient in term of uploading.
+  
+"""
+
+
+class post:
+  def __init__(self, data, ip, port, localip, localport):
+    socketobject = openconnection(ip,port,localip,localport,5000)
+    socketobject.send(packetize(data)+'\n')
+    log(data," sent...")
+    
+  def packetize(data):
+    packet = 'POST / HTTP/1.1'
+    packet += '\nHost: seattle.cs.washington.edu'
+    packet += '\nUser-Agent: Sensibility'
+    packet += '\nContent-Length: '+str(charcount(data))
+    packet += '\nContent-Type: application/x-www-form-urlencoded'
+    packet += '\nAccept Encoding: identity'
+    packet += '\nConnection: keep-alive'
+    packet += '\n\nentries='+str(data)
+    return packet  
+  
+  def charcount(arr):
+    return len(' '.join(arr))
