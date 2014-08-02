@@ -42,6 +42,7 @@ def getSpeed():
   speed = get_obd_data('01 0D')
   sleep(10)
   log("output ",str(speed))
+  return str(speed)
   """
   if speed is None:
     return 'NO DATA'
@@ -70,13 +71,15 @@ def getRPM():
     The decimal value of the car's RPM.    
   """
   ret = get_obd_data('01 0C')
+  """
   if ret is not None:
     a = toDecimal(ret[0:2])
     b = toDecimal(ret[2:4])
     calculation = ((a*256)+b)/4
     return calculation
   else:
-    return 'NO DATA'
+    return 'NO DATA'"""
+  return str(ret)
     
 def getMAF():
   """
@@ -236,42 +239,10 @@ def stringify(data):
   
   return copy 
 
-def getContacts():
-  request_data(mycontext['sensor_socket'], 'getContacts', [])
-  
+
 #=====================================================================================
 # OBD sensor specific functions. 
 #=====================================================================================
-
-# Use this when connecting to the OBD simulator. [STATUS] Deprecated.
-def get_obd_simulator_data(pid):
-  """
-  <Purpose>
-    Returns OBD data in decimal for a particular PID.
-
-  <Arguments>
-    pid: The parameter id that we want to read from the car.
-  
-  <Returns>
-    The decimal value of the vehicular sensor requested.
-  """  
-  if(mycontext['OBDIP'] == '' or mycontext['OBDIP'] is None or mycontext['OBDPort'] == '' or mycontext['OBDPort'] is None or mycontext['GENIPort'] is None or mycontext['GENIPort'] == ""):
-    log('[obdlib] Error: OBDIP or OBDPort not assigned.')
-  else:
-    cmd = pid[3:5]
-    socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),int(mycontext['GENIPort']),5000)
-    socketobject.send(pid+'\n')
-    sleep(3)
-    data = socketobject.recv(15)
-    sleep(1)
-    socketobject.close()    
-    if '?' not in data or 'NO DATA' not in data:
-      return trimmer(data, cmd)
-    else:
-      log('\n[obdlib] Error data not understood.')
-      return None
-   
- 
 def get_obd_data(pid):
   """
   <Purpose>
@@ -289,27 +260,23 @@ def get_obd_data(pid):
   else:
     # Used to find the requested command from the PID passed.
     cmd = pid[3:5]
-    # We connect to the last known wifi ap, which must be the OBD-II wifi.
-    #log("\n\nReconnecting...")
-    #log("\nStatus: ",str(request_data(mycontext['sensor_socket'], 'wifiReconnect', [])))
-    #sleep(1)
+    log("\nAttempting connection...\n",mycontext['OBDIP'],":",mycontext['OBDPort'],"\n")
     socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),int(mycontext['GENIPort']),30000)
-    sleep(5)
-    socketobject.send(pid+'\r\r')
-    sleep(3)
-      
-    # Retrieve the data (up to 15 bytes)
-    data = socketobject.recv(1500)
+    log("\nSending...\n")
+    mycontext['miki'] = 0
+    mycontext['dataArray'] = []
+    while True:
+      mycontext['miki']+=1
+      if mycontext['miki'] == 100:
+        break
+      else:
+        socketobject.send(pid+"\r")
+	sleep(2)
+        data = socketobject.recv(100)
+	log("DATA ",data)
+	
     
-    log("[GET] ",str(data))
-    sleep(2)
-    # Close the socket.
-    #socketobject.close()
-    #sleep(1)
-    # Disconnect from the OBD wifi, and send the data through the cellular network.
-    #log("\n\nDisconnecting from wifi...")
-    #log("\nStatus: ",str(request_data(mycontext['sensor_socket'], 'wifiDisconnect', [])))
-    # Error checking should be done elsewhere...
+    socketobject.close()
     return str(data)
     """
     if '?' not in data or 'NO DATA' not in data:
@@ -335,7 +302,6 @@ def send_obd_command(pid):
   else:
     socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),int(mycontext['GENIPort']),5000)   
     socketobject.send(pid+'\n')
-    sleep(3)
     data = socketobject.recv(15)
     socketobject.close()
     # Turn off wifi and make sure to be connected to 3G
