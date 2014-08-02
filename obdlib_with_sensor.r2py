@@ -1,0 +1,531 @@
+"""
+<Program>
+  obdlib.repy 
+  
+<Date Started>
+  June 26th, 2014
+	
+<Author>
+  Mike Reininger, NYU-Poly, USA
+
+<Purpose>
+  OBD sensor library for collecting vehicular sensor data.
+
+<Usage/Help>
+  OBD-II ELM327 sensors can be used to communicate between a car's controller area network (CAN), also known as the car's electronic brains, and a computer or mobile device. 
+  They can be purchased online (suggested model: http://amzn.com/B00AOIM2CC).
+
+  How to connect to the OBD on the Android:
+  1. Plug the device into the OBD port under the steering wheel, near the pedals. 
+  2. Navigate to your Android's settings --> wireless settings --> connect to wifi router. [MR: Note doing a SIM connection and wifi split.]
+  3. Choose WiFi_OBDii. 
+
+"""
+dy_import_module_symbols("sensorlib.r2py")
+
+
+#=====================================================================================
+# Vehicular sensor data retrieval functions from the OBD using PIDs.
+#=====================================================================================
+def getSpeed():
+  """
+  <Purpose>
+    Returns vehicular speed in KPH.
+    If MPH is needed, then use function toMPH() to convert to MPH.
+    
+  <Arguments>
+    None.
+
+  <Returns>
+    The decimal value of the car's speed in KPH.    
+  """
+  speed = get_obd_data('01 0D')
+  sleep(10)
+  log("output ",str(speed))
+  """
+  if speed is None:
+    return 'NO DATA'
+  else:
+    return toDecimal(speed)
+  """  
+def getRPM():
+  """
+  <Purpose>
+    Returns vehicular RPM. Since RPM data is sent to the Android in increments of 1/4 RPM, we divide the sensor value by 4 to obtain the real RPM (according to: http://elmelectronics.com/DSheets/ELM327DS.pdf)
+    Also, 2 byte hex data, like RPM, needs to be processed into a formula (given by the PID chart at: http://en.wikipedia.org/wiki/OBD-II_PIDs#Mode_1_PID_12) in order for RPM to be calculated.
+    For instance, if the RPM data returned is:
+      41 0C 0F A0
+    then... we must omit 41 and 0C, because they are headers.
+      0F A0
+    then...
+      set a = toDecimal('0F')   --> 15
+      set b = toDecimal('A0')   --> 160
+    finally...
+      RPM = ((a*256)+b)/4 = 1000
+        
+  <Arguments>
+    None.
+
+  <Returns>
+    The decimal value of the car's RPM.    
+  """
+  ret = get_obd_data('01 0C')
+  if ret is not None:
+    a = toDecimal(ret[0:2])
+    b = toDecimal(ret[2:4])
+    calculation = ((a*256)+b)/4
+    return calculation
+  else:
+    return 'NO DATA'
+    
+def getMAF():
+  """
+  <Purpose>
+    Returns vehicular MAF. We must also use the formula posted on the wikipedia chart link in getRPM() above in order to calculate the MAF.
+    This value is very useful when calculating the instantaneous fuel economy of the car.
+    
+  <Arguments>
+    None.
+
+  <Returns>
+    The decimal value of the car's MAF.    
+  """
+  ret = get_obd_data('01 10')
+  if ret is not None:
+    a = toDecimal(ret[0:2])
+    b = toDecimal(ret[2:4])
+    calculation = ((a*256)+b)/100
+    return calculation
+  else:
+    return 'NO DATA'
+    
+def getFuelPressure():
+  """
+  <Purpose>
+    Returns car's fuel pressure in kPa. We must also use the formula posted on the wikipedia chart link in getRPM() above in order to calculate the fuel pressure.
+
+  <Arguments>
+    None.
+
+  <Returns>
+    The decimal value of the car's fuel pressure.
+        
+  """
+  ret = get_obd_data('01 0A')
+  if ret is not None:
+    a = toDecimal(ret)
+    return a*3
+  else:
+    return 'NO DATA'
+    
+def getDistanceTraveledWithMIL():
+  """
+  <Purpose>
+    Returns the distance traveled in km with the "check engine light" on. We must also use the formula posted on the wikipedia table link in getRPM() above in order to calculate the exact timing of this incident. Range is 0 - 65535 km.
+
+  <Arguments>
+    None.    
+
+  <Returns>
+    The decimal value of the distance traveled with the "check engine light" on in km.
+  """
+  ret = get_obd_data('01 21')
+  if ret is not None:
+    a = toDecimal(ret[0:2])
+    b = toDecimal(ret[2:4])
+    calculation = (a*256)+b
+    return calculation
+  else:
+    return 'NO DATA'
+
+def getBarometricPressure():
+  """
+  <Purpose>
+    Returns the reading of the car's barometric pressure sensor in kPa (absolute). The range is from 0 - 255. For this reading, we do not need to use a formula.
+
+  <Arguments>
+    None.
+
+  <Returns>
+    The decimal value of the barometric pressure sensor in kPa.  
+  """
+  return toDecimal(get_obd_data('01 33'))
+
+def getThrottlePosition():
+  """
+  <Purpose>
+    Returns the throttle position, or how much the accelerator position is depressed on a scale of 0 - 100 %.
+
+  <Arguments>
+    None.
+
+  <Returns>
+    The decimal vlaue of the throttle position in percent.    
+  """
+  ret = get_obd_data('01 11')
+  if ret is not None:
+    a = toDecimal(ret)
+    return a*100/255 
+  else:
+    return 'NO DATA'
+    
+def getFuelLevel():
+  """
+  <Purpose>
+    Returns the car's fuel level on a scale of 0 - 100 %.
+
+  <Arguments>
+    None.
+
+  <Returns>
+    The decimal value of the fuel level input in percent. 
+  """
+  ret = get_obd_data('01 2F')
+  if ret is not None:
+    a = toDecimal(get_obd_data('01 2F'))
+    return a*100/255
+  else:
+    return 'NO DATA'
+    
+def getFuelConsumption():
+  """
+  <Purpose>
+    Returns instantaneous fuel consumption in MPG using the formula posted here: http://www.lightner.net/lightner/bruce/Lightner-183.pdf with MAF and VSS.
+
+  <Arguments>
+    None.
+
+  <Returns>
+    mpg: The instantaneous fuel consumption in decimal mpg.    
+  """
+  mpg = 710.7 * getSpeed()/getMAF()
+  return mpg
+  
+def getCurrentLocation():
+  """
+  <Purpose>
+    Returns the Android's current location.
+
+  <Arguments>
+    None.
+
+  <Returns>
+    sensor_data: the phone's current GPS data.    
+  """
+  request_data(mycontext['sensor_socket'], 'startLocating', [])
+  # Loop GPS querying until we get a valid response. The loop will break once SL4A returns a response that should start with {u'network' ... .
+  while True:
+    try:
+      sensor_data = request_data(mycontext['sensor_socket'], 'readLocation', []) 
+      if str(sensor_data).startswith("{u'network'"):
+        break
+    except Exception as e:
+      request_data(mycontext['sensor_socket'], 'stopSensing', []) 
+      mycontext['sensor_socket'].close()
+  del sensor_data['network']['provider']
+  del sensor_data['network']['time']
+  return sensor_data
+
+
+def stringify(data):
+  copy = {}
+  for key in data:
+    if isinstance(data[key], dict):
+      data[key] = stringify(data[key])
+    copy[str(key)] = data[key]
+  
+  return copy 
+
+def getContacts():
+  request_data(mycontext['sensor_socket'], 'getContacts', [])
+  
+#=====================================================================================
+# OBD sensor specific functions. 
+#=====================================================================================
+
+# Use this when connecting to the OBD simulator. [STATUS] Deprecated.
+def get_obd_simulator_data(pid):
+  """
+  <Purpose>
+    Returns OBD data in decimal for a particular PID.
+
+  <Arguments>
+    pid: The parameter id that we want to read from the car.
+  
+  <Returns>
+    The decimal value of the vehicular sensor requested.
+  """  
+  if(mycontext['OBDIP'] == '' or mycontext['OBDIP'] is None or mycontext['OBDPort'] == '' or mycontext['OBDPort'] is None or mycontext['GENIPort'] is None or mycontext['GENIPort'] == ""):
+    log('[obdlib] Error: OBDIP or OBDPort not assigned.')
+  else:
+    cmd = pid[3:5]
+    socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),int(mycontext['GENIPort']),5000)
+    socketobject.send(pid+'\n')
+    sleep(3)
+    data = socketobject.recv(15)
+    sleep(1)
+    socketobject.close()    
+    if '?' not in data or 'NO DATA' not in data:
+      return trimmer(data, cmd)
+    else:
+      log('\n[obdlib] Error data not understood.')
+      return None
+   
+ 
+def get_obd_data(pid):
+  """
+  <Purpose>
+    Returns OBD data in decimal for a particular PID.
+
+  <Arguments>
+    pid: The parameter id that we want to read from the car.
+  
+  <Returns>
+    The decimal value of the vehicular sensor requested.
+  """
+  # Bottom if statement should be moved to initialization...
+  if(mycontext['OBDIP'] == '' or mycontext['OBDIP'] is None or mycontext['OBDPort'] == '' or mycontext['OBDPort'] is None or mycontext['GENIPort'] is None or mycontext['GENIPort'] == ""):
+    log('[obdlib] Error: OBDIP or OBDPort not assigned.')
+  else:
+    # Used to find the requested command from the PID passed.
+    cmd = pid[3:5]
+    # We connect to the last known wifi ap, which must be the OBD-II wifi.
+    #log("\n\nReconnecting...")
+    #log("\nStatus: ",str(request_data(mycontext['sensor_socket'], 'wifiReconnect', [])))
+    #sleep(1)
+    socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),int(mycontext['GENIPort']),30000)
+    sleep(5)
+    socketobject.send(pid+'\r\r')
+    sleep(3)
+      
+    # Retrieve the data (up to 15 bytes)
+    data = socketobject.recv(1500)
+    
+    log("[GET] ",str(data))
+    sleep(2)
+    # Close the socket.
+    #socketobject.close()
+    #sleep(1)
+    # Disconnect from the OBD wifi, and send the data through the cellular network.
+    #log("\n\nDisconnecting from wifi...")
+    #log("\nStatus: ",str(request_data(mycontext['sensor_socket'], 'wifiDisconnect', [])))
+    # Error checking should be done elsewhere...
+    return str(data)
+    """
+    if '?' not in data or 'NO DATA' not in data:
+      return trimmer(data, cmd)
+    else:
+      log('\n[obdlib] Error data not understood.')
+      return None  
+    """
+def send_obd_command(pid):
+  """
+  <Purpose>
+    Sends hexadecimal PID to OBD sensor for a particular PID.
+
+  <Arguments>
+    pid: The parameter id that we want to read from the car.
+  
+  <Returns>
+    None.
+  """
+  # Make sure wifi is connected to OBD.
+  if(mycontext['OBDIP'] == '' or mycontext['OBDIP'] is None or mycontext['OBDPort'] == '' or mycontext['OBDPort'] is None or mycontext['GENIPort'] is None or mycontext['GENIPort'] == ""):
+    log('[obdlib] Error: OBDIP or OBDPort not assigned.')
+  else:
+    socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),int(mycontext['GENIPort']),5000)   
+    socketobject.send(pid+'\n')
+    sleep(3)
+    data = socketobject.recv(15)
+    socketobject.close()
+    # Turn off wifi and make sure to be connected to 3G
+    if '?' in data:
+      log('\n[obdlib] Error: PID not understood by car.')
+      return None
+    elif 'NO DATA' in data:
+      log('\n[obdlib] Error: No data provided for specified PID.')
+      return None
+    else:
+      log("\n[obdlib] Sent command: ",pid," with response: ",data)
+
+
+def resetOBD():
+  """
+  <Purpose>
+    Resets the OBD sensor in case it has been programmed otherwise. [OPTIONAL]
+
+  <Arguments>
+    None.
+
+  <Exceptions>
+    None.
+
+  <Returns>
+    None.
+  """
+  
+  send_obd_command('AT Z')
+
+def setAutomaticProtocol():
+  """
+  <Purpose>
+    Sets the OBD sensor to automatic protocol, in case it has been changed previously. This ensures that our communication with the device isn't garbled.
+
+  <Arguments>
+    None.
+
+  <Exceptions>
+    None.
+
+  <Returns>
+    None. 
+  """
+  send_obd_command('AT SP 0')
+
+#=====================================================================================
+# obdlib.repy added functions for trimming, converting, and initialization.
+#=====================================================================================
+
+def trimmer(data, cmd):
+  """
+  <Purpose>
+    Trims the data from the OBD-II. This will remove the hex headers and, if necessary, join 4 byte hex data together. It is then converted in get_obd_data(). 
+
+  <Arguments>
+    data: The hex data from the OBD-II that needs to be trimmed.
+    cmd: The specific cmd from the PID that is needed. It is the hex byte after '41'. (ie. 41 0D 2A  --> cmd is 0D)
+
+  <Returns>
+    The trimmed hex sensor data. It is then sent to the toDecimal() converter in get_obd_data().
+
+  <Example>
+    1. If the returned data from the OBD is for speed, data = 41 0D 2A .
+    2. data is now trimmed to remove everything from the left up to '0D ', and remove the extra 2 characters '\n>' that are returned on the right of the result.
+    3. If there are two bytes of hex (ie. RPM), then we join them together, and return that.
+  """
+  log("[trimmer] ",data)
+  data = data[data.index(cmd)+3:-2]
+  data = data.replace(" ","")
+  return data
+
+
+def toDecimal(data):
+  """
+  <Purpose>
+    To convert hex data into decimal.
+
+  <Arguments>
+    data: The hex data that needs converting. 
+
+  <Returns>
+    An integer conversion from hex to decimal.       
+  """
+  return int(data, 16)
+
+
+def toMPH(k):
+  """
+  <Purpose>
+    To convert KPH to MPH.
+
+  <Arguments>
+    k: The speed in kph that will be converted to mph.
+
+  <Returns>
+    A float conversion from kph to mph.  
+  """
+  return float(k)/1.609344
+
+
+def setOBDIP(ip):
+  """
+  <Purpose>
+    Sets the OBD sensor/simulator IP. If none is specified, the default IP (the IP programmed into the OBD sensor during its manufacture), 192.168.0.10, is chosen.
+
+  <Arguments>
+    ip: The OBD sensor/simulator IP address chosen to connect to.
+
+  <Returns>
+    None.   
+  """
+  if ip==None:
+    mycontext['OBDIP'] = '192.168.0.10'
+  else:
+    mycontext['OBDIP'] = ip
+
+def setOBDPort(port):
+  """
+  <Purpose>
+    Sets the OBD sensor/simulator port. If none is specified, the default port (the port programmed into the OBD sensor during its manufacture), 35000, is chosen.
+
+  <Arguments>
+    port: The OBD sensor/simulator port chosen to connect to.
+
+  <Returns>
+    None.    
+  """
+  if port==None:
+    mycontext['OBDPort'] = 35000
+  else:
+    mycontext['OBDPort'] = port   
+    
+def defaultSetup():
+  """
+  <Purpose>
+    Runs default setup using pre-programmed OBD ip and port connection values.
+
+  <Arguments>
+    None.
+
+  <Returns>
+    None.  
+  """
+  setOBDIP('192.168.0.10')
+  setOBDPort(35000)
+
+def customSetup(ip,port, returnPort):
+  """
+  <Purpose>
+    Runs custom setup using custom OBD ip and port connection values.
+
+  <Arguments>
+    ip: OBD sensor/simulator IP.
+    port: OBD sensor/simulator port.  
+  """
+  setOBDIP(ip)
+  setOBDPort(int(port))
+  mycontext['GENIPort'] = returnPort
+
+def setSensorPort(port):
+  """
+  <Purpose>
+    Allows user to select which SL4A port they wish to use to communicate with the Android's sensors.
+
+  <Arguments>
+    port: The port value for SL4A.
+
+  <Returns>
+    None.    
+  """
+  mycontext['sensor_port'] = port
+  mycontext['sensor_socket'] = getconnection(mycontext['sensor_port'])
+
+# Returns time in UTC-epoch (see: http://www.epochconverter.com/)
+def getCurrentTime():
+  request_data(mycontext['sensor_socket'], 'startLocating', [])
+  # Loop GPS querying until we get a valid response. The loop will break once SL4A returns a response that should start with {u'network' ... .
+  while True:
+    try:
+      sensor_data = request_data(mycontext['sensor_socket'], 'readLocation', []) 
+      if str(sensor_data).startswith("{u'network'"):
+        break
+    except Exception as e:
+      request_data(mycontext['sensor_socket'], 'stopSensing', []) 
+      sensor_socket.close()
+  return str(sensor_data['network']['time'])
+
+# Returns unique subscriber ID for CDMA or IMEI for GSM phones as an ID. <MR> Please add a test if none type.
+def deviceID():
+  uid = request_data(mycontext['sensor_socket'], 'getSubscriberId', [])
+  return uid
+
