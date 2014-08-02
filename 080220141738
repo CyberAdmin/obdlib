@@ -64,14 +64,27 @@ def demo():
 def store(data):
   new_output = []
   for x in data:
-    x = x.replace("\r", "").replace("\n", "").replace(">", ",")
+    x = x.replace("\r", "").replace("\n", "").replace(">", ";")
     x = x[:-1]
-    log("Replaced ",x)
+    x = x[x.index("41"):]
     new_output.append(x)
+  humanize(new_output)  
   filename = "results.txt"
   f = openfile(filename, True)
   f.writeat(str(new_output), 0)
   f.close()
+
+def humanize(data_array):
+  for entry in data_array:
+    temp_array = entry.split(";")
+    speeds = []
+    for value in temp_array:
+      value = value[value.index("41"):]
+      cmd = value[3:5]
+      if cmd == '0C':
+        log("")
+      if cmd == '0D':
+        log("\nSpeed: ",str(toDecimal(value[6:8])), "kph\n")
 
 def getRPM():
   """
