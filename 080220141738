@@ -46,6 +46,7 @@ def demo():
   socketobject = openconnection(mycontext['OBDIP'],mycontext['OBDPort'],getmyip(),int(mycontext['GENIPort']),30000)
   log("\nSending...\n")
   i = 0
+  output = []
   while i<10:
     i+=1
     socketobject.send(getSpeed())
@@ -55,14 +56,19 @@ def demo():
     socketobject.send(getMAF())
     sleep(1)
     data = socketobject.recv(100)
-    
-    log("Data ",data)
-    filename = "r"+str(i)+".txt"
-    f = openfile(filename, True)
-    f.writeat(str(data), 0)
-    f.close()
-    
+    output.append(str(data))
+   
+  store(output)  
   socketobject.close()
+
+def store(data):
+  for x in data:
+    x = x.replace("\r", "").replace("\n", "").replace(">", " , ")
+    log("Replaced ",x)
+  filename = "results.txt"
+  f = openfile(filename, True)
+  f.writeat(str(data), 0)
+  f.close()
 
 def getRPM():
   """
