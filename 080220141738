@@ -62,12 +62,15 @@ def demo():
   socketobject.close()
 
 def store(data):
+  new_output = []
   for x in data:
-    x = x.replace("\r", "").replace("\n", "").replace(">", " , ")
+    x = x.replace("\r", "").replace("\n", "").replace(">", ",")
+    x = x[:-1]
     log("Replaced ",x)
+    new_output.append(x)
   filename = "results.txt"
   f = openfile(filename, True)
-  f.writeat(str(data), 0)
+  f.writeat(str(new_output), 0)
   f.close()
 
 def getRPM():
