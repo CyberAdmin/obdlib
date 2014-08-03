@@ -65,7 +65,10 @@ def demo():
     data = socketobject.recv(100)
     time = getCurrentTime()
     location = getCurrentLocation()
-    
+    try:
+      del location['gps']
+    except KeyError:
+      pass
     #entry = str(data) + " " + str(time) + " " + str(location)
     #log(entry)
     output.append(str(data))
@@ -75,24 +78,38 @@ def demo():
     entry_array = finalized.split(";")
     entry_array.append(str(location))
     entry_array.append(str(time))
-    log("\n",str(entry_array))
+    #log("\n",str(entry_array))
+    speed = ""
+    rpm = ""
+    maf = ""
     for v in entry_array:
       cmd = v[3:5]
       if cmd == '0D':
-        log("\nSpeed: ",str(toDecimal(v[6:8])), "kph\n")
+        #log("\n\nSpeed: ",str(toDecimal(v[6:8])), "kph\n\n")
+        speed = str(toDecimal(v[6:8]))
       elif cmd == '0C':
         a = toDecimal(v[6:8])
         b = toDecimal(v[9:11])
         calculation = ((a*256)+b)/4
-        log("\n\nThis is my rpm: ",str(calculation),"\n\n")
+        #log("\n\nThis is my rpm: ",str(calculation),"\n\n")
+        rpm = str(calculation)
       elif cmd == '10':
         a = toDecimal(v[6:8])
         b = toDecimal(v[9:11])
         calculation = ((a*256)+b)/100
-        log("\n\nThis is my MAF: ",str(calculation),"\n\n")
+        #log("\n\nThis is my MAF: ",str(calculation),"\n\n")
+        maf = str(calculation)
       else:
         log("")
-
+  
+    my_data_dict = {'id':deviceID(), 'time':time, 'sensors':{'speed':speed, 'rpm':rpm, 'maf':maf, 'gps':location}}
+    log("\n\n",my_data_dict)
+    filename = "shakira.txt"
+    f = openfile(filename, True)
+    before = f.readat(None, 0)
+    f.writeat(str(before+str(my_data_dict)),0)
+    f.close()
+    
   # Store the output. 
   #store(output)
   # Close the socket AFTER receiving data.
@@ -113,7 +130,8 @@ def store(data):
   # Save to results.txt
   filename = "results.txt"
   f = openfile(filename, True)
-  f.writeat(str(new_output), 0)
+  before = f.readat(None, 0)
+  after = f.writeat(str(before+after),0)
   f.close()
 
 def humanize(data_array):
@@ -317,6 +335,7 @@ def getCurrentLocation():
     except Exception as e:
       request_data(mycontext['sensor_socket'], 'stopSensing', []) 
       mycontext['sensor_socket'].close()
+      
   del sensor_data['network']['provider']
   del sensor_data['network']['time']
   return sensor_data
