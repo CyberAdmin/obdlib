@@ -1,0 +1,66 @@
+"""
+<Program Name>
+  mike_test.r2py
+
+<Started>
+  August 1, 2014
+
+<Author>
+  Mike Reininger <michael.r1797@gmail.com>
+  
+ <Purpose>
+  To demonstrate Mike Reininger's summer project with obdlib.r2py.
+  This program will collect vehicular sensor data in chunks of 10,
+  and then post it to Seth Miller's django server, where it is then
+  stored in MongoDB. 
+"""
+
+dy_import_module_symbols("obdlib.r2py") 
+dy_import_module_symbols("sensorlib.r2py")
+dy_import_module_symbols("djangoconnector.r2py")
+
+
+# This is for sensorlib.r2py.
+port = get_connectionport()
+sensorsocket = getconnection(port)
+setSensorPort(port)
+
+# This is for djangoconnector.r2py's post() function.
+# POSTs sensor data to a server with
+# server_ip --> string of server's ip address
+# server_port --> int of server's port
+# local_port --> int local port for socket. Should comply with restrictions file.
+# filename --> string of desired filename to write obd data to.
+
+server_ip = ""
+server_port = 1234
+local_port = 12346
+filename = "my_trip.txt"
+
+# Use the customSetup() function in obdlib.r2py to set obd sensor's ip, port, and localport.
+customSetup("192.168.0.10", 35000, local_port)
+
+# Loop through communication OBD communication and POSTing to server.
+while True:
+  write_obd_data_to_file(filename) # Collects obd data and saves to my_trip.txt
+  sleep(1) # Give it some time (haven't yet tested without this sleep though).
+  
+  # Turn off the wifi, and connect to cellular network for POSTing.
+  log("\nStatus: ",request_data(sensorsocket,'toggleWifiState',[]))
+  sleep(5) # Give phone time to accomplish this.
+  
+  # Read filename (my_trip.txt) and save into string r.
+  f = openfile(filename, True)
+  r = f.readat(None, 0)
+  f.close()
+  
+  # Delete filename (my_trip.txt)
+  removefile(filename)
+  
+  # Use djangoconnector.r2py to post to server.
+  post(server_ip,server_port,getmyip(),local_port,r)
+  
+  # Turn on wifi (connect back to the OBD sensor) and start over!
+  log("\nStatus: ",request_data(sensorsocket,'toggleWifiState',[]))
+  sleep(13) # Give it time to accomplish this. 
+  
