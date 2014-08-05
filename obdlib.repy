@@ -19,6 +19,9 @@
   2. Navigate to your Android's settings --> wireless settings --> connect to wifi router. [MR: Note doing a SIM connection and wifi split.]
   3. Choose WiFi_OBDii. 
 
+<STATUS>
+  DEPRECATED.
+
 """
 
 
