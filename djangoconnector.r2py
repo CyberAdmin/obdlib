@@ -1,32 +1,55 @@
 """
 <Purpose>
-  Sends vehicular sensor data to Seth's Django SQL database.
-  
+  Sends vehicular sensor data to Seth's Django/MongoDB database for demo.
+  I crafted a POST packet that is specific to Seth's query string for data entry on his end (entries=)
+
 <Author>
   Mike Reininger
-  
-<Status>
-  May become depracated, however for the time being, it uses way less dependencies than httpretrieve.r2py.
   
 """
 
 
-class post:
-  def __init__(self, data, ip, port, localip, localport):
-    socketobject = openconnection(ip,port,localip,localport,5000)
-    socketobject.send(packetize(data)+'\n')
-    log(data," sent...")
+def post(ip, port, localip, localport, data):
+  """
+  <Purpose>
+    Sends a POST packet to a server.
+   
+  <Arguments>
+    ip: string of destip
+    port: int of destport
+    localip: string of localip
+    localport: int of localport
+    data: string of data to be POSTed.
     
-  def packetize(data):
-    packet = 'POST / HTTP/1.1'
-    packet += '\nHost: seattle.cs.washington.edu'
-    packet += '\nUser-Agent: Sensibility'
-    packet += '\nContent-Length: '+str(charcount(data))
-    packet += '\nContent-Type: application/x-www-form-urlencoded'
-    packet += '\nAccept Encoding: identity'
-    packet += '\nConnection: keep-alive'
-    packet += '\n\nentries='+str(data)
-    return packet  
+  <Returns>
+    None.
+  """
+  log("Initializing...\n")
+  packette = packetize(data)
+  socketobject = openconnection(ip, port, localip, localport, 3000)
+  socketobject.send(packette+'\n')
+  sleep(1)
+  socketobject.close()
+    
+def packetize(data):
+  """
+  <Purpose>
+    Creates a POST packet for the given data.
+    
+  <Arguments>
+    data: string of data.
+    
+  <Returns>
+    packet: string of the packet, formulated for Seth's demo server (note the use of the query string "entries")
+  """
+  packet = 'POST / HTTP/1.1'
+  packet += '\nHost: seattle.cs.washington.edu'
+  packet += '\nUser-Agent: Sensibility'
+  packet += '\nContent-Length: 800000'  # CONTENT LENGTH SHOULD BE ACTUAL, NOT MADE UP!
+  packet += '\nContent-Type: application/x-www-form-urlencoded'
+  packet += '\nAccept Encoding: identity'
+  packet += '\nConnection: close'
+  packet += '\n\nentries='+str(data)
+  log(packet)
+  return packet  
   
-  def charcount(arr):
-    return len(' '.join(arr))
