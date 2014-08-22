@@ -42,8 +42,8 @@ customSetup("192.168.0.10", 35000, local_port)
 
 # Loop through communication OBD communication and POSTing to server.
 while True:
-  write_obd_data_to_file(filename) # Collects obd data and saves to my_trip.txt
-  sleep(1) # Give it some time (haven't yet tested without this sleep though).
+  write_obd_data_to_file(filename) # Reads obd data from car and saves JSONified data to my_trip.txt
+  sleep(1) # Give it some time to accomplish this (haven't yet tested without this sleep though).
   
   # Turn off the wifi, and connect to cellular network for POSTing.
   log("\nStatus: ",request_data(sensorsocket,'toggleWifiState',[]))
@@ -62,5 +62,5 @@ while True:
   
   # Turn on wifi (connect back to the OBD sensor) and start over!
   log("\nStatus: ",request_data(sensorsocket,'toggleWifiState',[]))
-  sleep(13) # Give it time to accomplish this. 
+  sleep(6) # Give it time to accomplish this. For my HTC Inspire 4G, it took about 6 seconds for this to be accomplished.
   
